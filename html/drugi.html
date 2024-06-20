@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pie Chart Studenti po Županiji</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            width: 100vw;
+            margin: 0;
+        }
+
+        .checkbox-container {
+            display: flex;
+            flex-direction: column;
+            margin-right: 20px;
+            padding-top: 20px;
+        }
+
+        .chart-container {
+            margin-top: 100px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .legend-container {
+            margin-top: 80px;
+            display: flex;
+            flex-direction: column;
+            margin-left: 20px;
+        }
+
+        .chart {
+            display: block;
+        }
+
+        .legend {
+            display: block;
+        }
+
+        .checkbox-container label {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="checkbox-container" id="checkbox-container">
+        </div>
+        <div class="chart-container">
+            <svg class="chart"></svg>
+        </div>
+        <div class="legend-container">
+            <svg class="legend"></svg>
+        </div>
+    </div>
+
+    <script>
+        d3.json("modifiedData.json").then(function (data) {
+            const studentsByRegion = new Map();
+
+            data.forEach(function (d) {
+                const region = d.region;
+                const numberOfStudents = d.number_of_students;
+                if (studentsByRegion.has(region)) {
+                    studentsByRegion.set(region, studentsByRegion.get(region) + numberOfStudents);
+                } else {
+                    studentsByRegion.set(region, numberOfStudents);
+                }
+            });
+
+            const aggregatedData = Array.from(studentsByRegion, ([region, numberOfStudents]) => ({ region, numberOfStudents }));
+
+            const customColors = [
+                "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf",
+                "#aec7e8", "#ffbb78", "#98df8a", "#ff9896", "#c5b0d5", "#c49c94", "#f7b6d2", "#c7c7c7", "#dbdb8d", "#9edae5",
+                "#8c6d31", "#e7ba52", "#e377c2", "#7f7f7f", "#bcbd22"
+            ];
+
+            function getColor(region) {
+                const colorScale = d3.scaleOrdinal()
+                    .domain(aggregatedData.map(d => d.region))
+                    .range(customColors);
+                return colorScale(region);
+            }
+
+            function createPieChart(data) {
+                const width = 700;
+                const height = 400;
+                const radius = Math.min(width, height) / 2;
+
+                d3.select(".chart").selectAll("*").remove();
+
+                const svg = d3.select(".chart")
+                    .attr("width", width)
+                    .attr("height", height)
+                    .append("g")
+                    .attr("transform", `translate(${width / 2},${height / 2})`);
+
+                const pie = d3.pie()
+                    .value(d => d.numberOfStudents)
+                    .sort(null);
+
+                const arc = d3.arc()
+                    .innerRadius(0)
+                    .outerRadius(radius);
+
+                const arcs = svg.selectAll("arc")
+                    .data(pie(data))
+                    .enter()
+                    .append("g")
+                    .attr("class", "arc")
+                    .on("mouseover", function (event, d) {
+                        if (d.data) {
+                            svg.append("text")
+                                .attr("class", "tooltip")
+                                .attr("transform", "rotate(-90)")
+                                .attr("x", 0)
+                                .attr("y", -radius * 1.2)
+                                .attr("text-anchor", "middle")
+                                .text(`${d.data.region}: ${d.data.numberOfStudents} studenata`);
+                        }
+                    })
+                    .on("mouseout", function () {
+                        svg.select(".tooltip").remove();
+                    });
+
+                arcs.append("path")
+                    .attr("d", arc)
+                    .attr("fill", d => getColor(d.data.region));
+
+                svg.append("text")
+                    .attr("x", 0)
+                    .attr("y", -height / 2)
+                    .attr("dy", "-1em")
+                    .style("text-anchor", "middle")
+                    .text("Studenti po Županiji");
+
+                updateLegend(data);
+            }
+
+            function createCheckboxes(data) {
+                const container = d3.select("#checkbox-container");
+
+                data.forEach(d => {
+                    const label = container.append("label");
+                    label.append("input")
+                        .attr("type", "checkbox")
+                        .attr("value", d.region)
+                        .property("checked", true)
+                        .on("change", updateChart);
+                    label.append("span")
+                        .text(d.region);
+                });
+            }
+
+            function updateChart() {
+                const selectedRegions = Array.from(d3.selectAll("#checkbox-container input:checked").nodes(), input => input.value);
+                const filteredData = aggregatedData.filter(d => selectedRegions.includes(d.region));
+                createPieChart(filteredData);
+            }
+
+            function updateLegend(data) {
+                const legendWidth = 300;
+                const legend = d3.select(".legend")
+                    .attr("width", legendWidth + 200)
+                    .attr("height", data.length * 20 + 20);
+
+                const legendGroups = legend.selectAll("g")
+                    .data(data);
+
+                const newGroups = legendGroups.enter().append("g")
+                    .attr("transform", function (_, i) {
+                        return `translate(10,${i * 20 + 10})`;
+                    });
+
+                newGroups.append("rect")
+                    .attr("x", 0)
+                    .attr("width", 18)
+                    .attr("height", 18)
+                    .style("fill", d => getColor(d.region));
+
+                newGroups.append("text")
+                    .attr("x", 25)
+                    .attr("y", 9)
+                    .attr("dy", ".35em")
+                    .style("text-anchor", "start")
+                    .text(function (d) {
+                        return d.region + " (" + d.numberOfStudents + ")";
+                    });
+
+                legendGroups.select("rect")
+                    .style("fill", d => getColor(d.region));
+
+                legendGroups.select("text")
+                    .text(function (d) {
+                        return d.region + " (" + d.numberOfStudents + ")";
+                    });
+
+                legendGroups.exit().remove();
+            }
+
+            createCheckboxes(aggregatedData);
+            createPieChart(aggregatedData);
+        }).catch(function (error) {
+            console.log("Došlo je do pogreške pri učitavanju podataka:", error);
+        });
+    </script>
+</body>
+
+</html>

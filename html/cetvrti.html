@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="https://d3js.org/d3.v3.min.js"></script>
+    <script src="http://d3js.org/topojson.v1.min.js"></script>
+    <title>Karta županije</title>
+    <style>
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-weight: bold;
+            font-size: 20px;
+            color: crimson;
+            background-color: #333;
+            padding: 10px;
+            border: 1px solid #ffffff;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+
+<body>
+    <script>
+        var width = 1200;
+        var height = 600;
+
+        var skala = d3.scale.linear()
+            .domain([50000, 800000])
+            .range([0, 6]);
+
+        var colors = [
+            "rgb(255, 204, 204)", // lighter shade
+            "rgb(248, 174, 174)", // slightly lighter shade
+            "rgb(241, 144, 144)", // base color adjusted
+            "rgb(233, 159, 159)", // base color
+            "rgb(218, 129, 129)", // slightly darker shade
+            "rgb(203, 99, 99)",   // darker shade
+            "rgb(188, 69, 69)"    // darkest shade
+        ];
+
+        console.log(colors);
+
+        var projection = d3.geo.mercator()
+            .center([15.5, 45.8])
+            .scale(5000)
+            .translate([width / 4, height / 4])
+            .rotate([0, 0]);
+
+        var path = d3.geo.path()
+            .projection(projection);
+
+        var svg = d3.select("body").append("svg")
+            .attr("width", width)
+            .attr("height", height);
+
+        d3.select("body")
+            .append("div")
+            .attr("id", "name");
+
+        d3.select("body")
+            .append("div")
+            .attr("id", "info");
+
+        var zoom = d3.behavior.zoom()
+            .translate(projection.translate())
+            .scale(projection.scale())
+            .scaleExtent([height, 18 * height])
+            .on("zoom", onZoom);
+
+        var g = svg.append("g")
+            .call(zoom);
+
+        d3.json("cro.json", function (error, cro) {
+            var data = topojson.feature(cro, cro.objects.layer1);
+            var states = g.selectAll("path.county")
+                .data(data.features)
+                .enter()
+                .append("path")
+                .attr("class", "county")
+                .attr("id", function (d) { return d.id; })
+                .attr("d", path)
+                .style("fill", function (d) {
+                    var value = Math.round(skala(d.properties.population));
+                    return colors[value];
+                })
+                .style("stroke", "gray")
+                .style("stroke-width", 1)
+                .style("stroke-opacity", 1)
+                .on("mouseover", function (d) {
+                    console.log(d.properties.population);
+                })
+                .on("click", onClick);
+        });
+
+        function onZoom() {
+            projection.translate(d3.event.translate).scale(d3.event.scale);
+            g.selectAll("path").attr("d", path);
+        }
+
+        function onClick(d) {
+            var a, b, c;
+
+            var centroid = path.centroid(d);
+            a = centroid[0];
+            b = centroid[1];
+            c = 4;
+            centered = d;
+
+            g.selectAll("path")
+                .classed("active", centered && function (d) { return d === centered; });
+
+            d3.select("#info").html(`Županija: ${d.properties.name} <br/> Broj stanovnika: ${d.properties.population} <br/> Površina: ${d.properties.area} km² <br/>`);
+
+            g.transition()
+                .duration(1000)
+                .attr("transform", `translate(${width / 2}, ${height / 2}) scale(${c}) translate(${-a}, ${-b})`)
+                .style("stroke-width", 1.5 / c + "px");
+
+            a = width / 2;
+            b = height / 2;
+            c = 1;
+            centered = null;
+
+            g.transition()
+                .delay(10000)
+                .duration(1000)
+                .attr("transform", `translate(${width / 2}, ${height / 2}) scale(${c}) translate(${-a}, ${-b})`)
+                .style("stroke-width", 1.5 / c + "px")
+                .each('end', function () {
+                    d3.select("#info").html("");
+                });
+        }
+    </script>
+</body>
+
+</html>
