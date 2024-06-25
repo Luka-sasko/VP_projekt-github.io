@@ -1,6 +1,6 @@
 body {
     width: 100vw;
-    height: 750px;
+    height: 100vw;
     font-family: Arial, sans-serif;
 }
 
@@ -15,9 +15,23 @@ h1 {
     align-items: center;
 }
 
-.container1,
+.container1 {
+    width: 100%;
+    height: 100%;
+    margin-left: 2%;
+    margin-bottom: 1%;
+    position: relative;
+}
+
 .container2,
-.container4,
+.container4 {
+    width: 100%;
+    height: 60%;
+    margin-left: 2%;
+    margin-bottom: 1%;
+    position: relative;
+}
+
 .container3 {
     width: 100%;
     height: 100%;
