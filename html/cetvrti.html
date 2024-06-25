@@ -17,7 +17,7 @@
             padding: 10px;
             border: 1px solid #ffffff;
             border-radius: 4px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
     </style>
 </head>
@@ -44,9 +44,9 @@
         console.log(colors);
 
         var projection = d3.geo.mercator()
-            .center([15.5, 45.8])
-            .scale(5000)
-            .translate([width / 4, height / 4])
+            .center([15.5, 45.8]) 
+            .scale(5000)          
+            .translate([width / 4, height / 4]) 
             .rotate([0, 0]);
 
         var path = d3.geo.path()
