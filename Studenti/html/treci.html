@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bar Chart Raspodjela Studenata po Study Fieldu</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        .bar {
+            fill: rgb(0, 0, 0);
+        }
+
+        .bar:hover {
+            fill: rgb(233, 159, 159);
+        }
+
+        .axis text {
+            font-size: 25px;
+        }
+
+
+        .axis path,
+        .axis line {
+            fill: none;
+            stroke: #000;
+            shape-rendering: crispEdges;
+        }
+
+        .tooltip {
+            position: absolute;
+            text-align: center;
+            width: 120px;
+            height: auto;
+            padding: 8px;
+            font: 16px sans-serif;
+            background: rgb(241, 131, 131);
+            border: 1px solid #aaa;
+            border-radius: 8px;
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        .sort_odabir {
+            margin-bottom: 0.5%;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sort_odabir">
+        <label for="sortOrder">Sortiranje:</label>
+        <select id="sortOrder">
+            <option value="ascending">Uzlazno</option>
+            <option value="descending">Silazno</option>
+        </select>
+    </div>
+    <div class="sort_odabir">
+        <button id="toggleStudyFields">Odabir znanstvenih područja</button>
+    </div>
+
+    <div class="sort_odabir" id="checkboxContainerDiv">
+        <label for="studyFields">Odaberi studijska područja:</label><br>
+        <div id="checkboxContainer"></div>
+    </div>
+    <svg class="chart"></svg>
+
+    <script>
+        d3.json("modifiedData.json").then(function (data) {
+            const studyFields = [...new Set(data.map(d => d.study_field))];
+
+            const checkboxContainer = d3.select("#checkboxContainer");
+            studyFields.forEach(field => {
+                checkboxContainer.append("input")
+                    .attr("type", "checkbox")
+                    .attr("id", field)
+                    .attr("value", field)
+                    .attr("checked", true)
+                    .on("change", updateChart);
+
+                checkboxContainer.append("label")
+                    .attr("for", field)
+                    .text(field);
+                checkboxContainer.append("br");
+            });
+
+            const width = 800;
+            const height = 400;
+            const margin = { top: 20, right: 20, bottom: 150, left: 40 };
+
+            const svg = d3.select(".chart")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const x = d3.scaleBand()
+                .range([0, width])
+                .padding(0.1);
+
+            const y = d3.scaleLinear()
+                .range([height, 0]);
+
+            const sortOrderSelect = document.getElementById("sortOrder");
+            sortOrderSelect.addEventListener("change", updateChart);
+
+            const toggleStudyFieldsButton = document.getElementById("toggleStudyFields");
+            toggleStudyFieldsButton.addEventListener("click", toggleStudyFields);
+
+            const tooltip = d3.select("body").append("div")
+                .attr("class", "tooltip")
+                .style("opacity", 0);
+
+            function toggleStudyFields() {
+                const checkboxContainerDiv = document.getElementById("checkboxContainerDiv");
+                checkboxContainerDiv.style.display = checkboxContainerDiv.style.display === "none" ? "block" : "none";
+            }
+
+            function updateChart() {
+                const sortOrder = sortOrderSelect.value === "ascending" ? 1 : -1;
+
+                const selectedFields = Array.from(document.querySelectorAll("#checkboxContainer input:checked"), input => input.value);
+                const filteredData = data.filter(d => selectedFields.includes(d.study_field));
+
+                const counts = selectedFields.map(field => ({
+                    field: field,
+                    count: filteredData.filter(d => d.study_field === field)
+                        .reduce((acc, cur) => acc + cur.number_of_students, 0)
+                }));
+
+                counts.sort((a, b) => sortOrder * (a.count - b.count));
+
+                x.domain(counts.map(d => d.field));
+                y.domain([0, d3.max(counts, d => d.count)]).nice();
+
+                svg.selectAll(".bar").remove();
+
+                svg.selectAll(".bar")
+                    .data(counts)
+                    .enter().append("rect")
+                    .attr("class", "bar")
+                    .attr("x", d => x(d.field))
+                    .attr("width", x.bandwidth())
+                    .attr("y", d => y(0)) 
+                    .attr("height", 0)    
+                    .on("mouseover", function (event, d) {
+                        d3.select(this).attr("fill", "lightblue");
+                        tooltip.transition()
+                            .duration(200)
+                            .style("opacity", .9);
+                        tooltip.html(`<strong>${d.field}</strong><br/>Broj studenata: ${d.count}`)
+                            .style("left", (event.pageX) + "px")
+                            .style("top", (event.pageY - 28) + "px");
+                    })
+                    .on("mouseout", function () {
+                        d3.select(this).attr("fill", "steelblue");
+                        tooltip.transition()
+                            .duration(500)
+                            .style("opacity", 0);
+                    })
+                    .merge(svg.selectAll(".bar")) 
+                    .transition()
+                    .duration(1500)
+                    .attr("x", d => x(d.field))
+                    .attr("width", x.bandwidth())
+                    .attr("y", d => y(d.count))
+                    .attr("height", d => height - y(d.count));
+
+                svg.selectAll(".bar")
+                    .exit() 
+                    .remove();
+
+                svg.selectAll(".x-axis").remove();
+                svg.append("g")
+                    .attr("class", "x-axis")
+                    .attr("transform", `translate(0,${height})`)
+                    .call(d3.axisBottom(x))
+                    .selectAll("text")
+                    .attr("transform", "rotate(-70)")
+                    .attr("x", -9)
+                    .attr("y", 0)
+                    .style("text-anchor", "end")
+                    .text(d => d.substring(0, 30));
+
+                svg.selectAll(".y-axis").remove();
+                svg.append("g")
+                    .attr("class", "y-axis")
+                    .call(d3.axisLeft(y));
+
+            }
+
+            updateChart();
+        }).catch(function (error) {
+            console.log("Došlo je do pogreške pri učitavanju podataka:", error);
+        });
+    </script>
+</body>
+
+</html>

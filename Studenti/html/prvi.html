@@ -50,7 +50,7 @@
         </select>
 
         <label for="top-n">Prvih N učilišta:</label>
-        <input type="number" id="top-n" min="1" max="150" value="100">
+        <input type="number" id="top-n" min="1" max="150" value="150">
 
         <label for="min-students">Minimalan broj studenata:</label>
         <input type="number" id="min-students" min="0" value="0">
@@ -69,7 +69,7 @@
         d3.json("modifiedData.json").then(function (data) {
             students_data = data;
             populateRegionDropdown(data);
-            createChart(students_data.slice(0, 100));
+            createChart(students_data);
 
             d3.select("#update-chart").on("click", function () {
                 var sortOrder = d3.select("#sort-order").property("value");
@@ -103,66 +103,81 @@
         }
 
         function createChart(data) {
-            var svgWidth = 1200;
-            var svgHeight = 1400; 
+    var svgWidth = 1200;
+    var svgHeight = 600;
 
-            var color = d3.scaleOrdinal(d3.schemeCategory10);
+    var color = d3.scaleOrdinal(d3.schemeCategory10);
 
-            var svg = d3.select("body").append("svg")
-                .attr("width", svgWidth)
-                .attr("height", svgHeight);
+    var svg = d3.select("body").append("svg")
+        .attr("width", svgWidth)
+        .attr("height", svgHeight);
 
-            var margin = { top: 20, right: 20, bottom: 40, left: 400 }, 
-                width = svgWidth - margin.left - margin.right,
-                height = svgHeight - margin.top - margin.bottom;
+    var margin = { top: 20, right: 20, bottom: 200, left: 40 },
+        width = svgWidth - margin.left - margin.right,
+        height = svgHeight - margin.top - margin.bottom;
 
-            var x = d3.scaleLinear().rangeRound([0, width]);
-            var y = d3.scaleBand().rangeRound([0, height]).padding(0.6); 
+    var x = d3.scaleBand().rangeRound([0, width]).padding(0.2);
+    var y = d3.scaleLinear().rangeRound([height, 0]);
 
-            var g = svg.append("g")
-                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+    var g = svg.append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-            x.domain([0, d3.max(data, function (d) { return d.number_of_students; })]);
-            y.domain(data.map(function (d) { return d.academic_name; }));
+    x.domain(data.map(function (d) { return d.academic_name; }));
+    y.domain([0, d3.max(data, function (d) { return d.number_of_students; })]);
 
-            g.append("g")
-                .attr("class", "axis axis-x")
-                .attr("transform", "translate(0," + height + ")")
-                .call(d3.axisBottom(x).ticks(10));
+    g.append("g")
+        .attr("class", "axis axis-x")
+        .attr("transform", "translate(0," + height + ")")
+        .call(d3.axisBottom(x).tickSizeOuter(5))
+        .selectAll(".tick text")
+        .attr("transform", "rotate(-80)")
+        .attr("x", -10)
+        .attr("y", 0)
+        .style("text-anchor", "end")
+        .text(function (d) {
+            return d.length > 15 ? d.substring(0, 15) + "..." : d;
+        });
 
-            g.append("g")
-                .attr("class", "axis axis-y")
-                .call(d3.axisLeft(y).tickSizeOuter(5));
+    g.append("g")
+        .attr("class", "axis axis-y")
+        .call(d3.axisLeft(y).ticks(10))
+        .append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 6)
+        .attr("dy", "0.71em")
+        .attr("text-anchor", "end")
+        .text("Broj studenata");
 
-            g.selectAll(".bar")
-                .data(data)
-                .enter().append("rect")
-                .attr("class", "bar")
-                .attr("x", 0)
-                .attr("y", function (d) { return y(d.academic_name); })
-                .attr("width", function (d) { return x(d.number_of_students); })
-                .attr("height", y.bandwidth())
-                .attr("fill", function (d) { return color(d.academic_name); })
-                .on("mouseover", function (event, d) {
-                    const tooltip = d3.select(".tooltip");
-                    tooltip.style("display", "block");
-                    tooltip.html(`<strong>${d.academic_name}</strong><br>${d.region}, Broj studenata: ${d.number_of_students}`)
-                        .style("left", (event.pageX - 185) + "px")
-                        .style("top", (event.pageY) + "px");
-                })
-                .on("mouseout", function () {
-                    const tooltip = d3.select(".tooltip");
-                    tooltip.style("display", "none");
-                });
-        }
+    g.selectAll(".bar")
+        .data(data)
+        .enter().append("rect")
+        .attr("class", "bar")
+        .attr("x", function (d) { return x(d.academic_name); })
+        .attr("y", function (d) { return y(d.number_of_students); })
+        .attr("width", x.bandwidth())
+        .attr("height", function (d) { return height - y(d.number_of_students); })
+        .attr("fill", function (d) { return color(d.academic_name); })
+        .on("mouseover", function (event, d) {
+            const tooltip = d3.select(".tooltip");
+            tooltip.style("display", "block");
+            tooltip.html(`<strong>${d.academic_name}</strong><br>${d.region}, Broj studenata: ${d.number_of_students}`)
+                .style("left", (event.pageX - 185) + "px")
+                .style("top", (event.pageY) + "px");
+        })
+        .on("mouseout", function () {
+            const tooltip = d3.select(".tooltip");
+            tooltip.style("display", "none");
+        });
+}
+
 
         function updateChart(data) {
             var svgSelection = d3.select("svg");
 
             svgSelection.transition()
-                .duration(800)
-                .style("opacity", 0)
-                .remove()
+                .duration(800) 
+                .style("opacity", 0) 
+                .remove() 
                 .end().then(() => {
                     createChart(data);
                 });

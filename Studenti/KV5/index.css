@@ -1,0 +1,61 @@
+/* index.css */
+
+#chart2 .bar {
+    fill: steelblue;
+    transition: fill 0.3s; 
+}
+
+#chart2 .bar:hover {
+    fill: #ff7f0e; 
+}
+
+#controls1{
+    margin-left: 80px;
+    margin-top: 50px;
+}
+#controls2{
+    margin-top: 50px;
+    margin-left: 80px;
+    
+}
+
+
+.axis text {
+    font-family:  'Times New Roman', Times, serif;
+    font-size: 14px;
+    font-style: italic;
+}
+
+.axis path,
+.axis line {
+    fill: none;
+    stroke: #000;
+    shape-rendering: crispEdges;
+}
+
+
+.tooltip {
+    position: absolute;
+    text-align: center;
+    margin-left: 200px;
+    padding: 6px;
+    font: 18px sans-serif;
+    background: rgb(233, 159, 159);
+    border: 0.5px solid #000;
+    border-radius: 6px;
+    display: none;
+}
+
+.tooltip2 {
+    position: absolute;
+    text-align: center;
+    width: auto; 
+    height: auto;
+    padding: 8px;
+    font: 18px sans-serif;
+    background: lightsteelblue;
+    border: 1px solid #aaa;
+    border-radius: 8px;
+    pointer-events: none;
+    opacity: 0;
+}
